@@ -13,6 +13,7 @@ RUN apt-get update && \
         curl \
         git \
         libbz2-dev \
+        libffi-dev \
         libreadline-dev \
         libsqlite3-dev \
         libssl-dev \
@@ -40,10 +41,15 @@ RUN pyenv global $PYTHON_VERSION
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 ENV PATH $ROOT_HOME/.poetry/bin:$PATH
 
+# Install essential python packages.
+COPY environments /tmp/environments
+RUN pip install -r /tmp/environments/base.txt
+
 # Copy in custom profiles.
 COPY customizer/profile/.vimrc $ROOT_HOME/.vimrc
 COPY customizer/profile/.bashrc $ROOT_HOME/.bashrc
 COPY customizer/git $ROOT_HOME/config/git
+
 
 # Start us off in /mnt.
 WORKDIR /mnt
