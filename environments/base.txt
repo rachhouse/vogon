@@ -1,2 +1,4 @@
+ipykernel
 ipython
+jupyter
 jupyterlab
