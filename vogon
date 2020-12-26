@@ -185,9 +185,9 @@ def main():
 
     # try to poetry update the repo
     # poetry install will complain if lock is out of date
-    print(f"Calling poetry update for {repo_name}")
+    print(f"Calling poetry install for {repo_name}")
     subprocess.call(
-        [f"docker exec {container_id} bash -c 'cd /repos/{repo_name}; poetry update'"],
+        [f"docker exec {container_id} bash -c 'cd /repos/{repo_name}; poetry install'"],
         shell=True,
     )
 
