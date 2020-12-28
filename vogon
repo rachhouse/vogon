@@ -35,6 +35,13 @@ for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.
     subparser.set_defaults(variant=name)
 
     subparser.add_argument(
+        "-i",
+        "--image",
+        help="Use a different docker image",
+        default="vogon",
+    )
+
+    subparser.add_argument(
         "-r",
         "--repo",
         help="Mount a local directory as a repo (defaults to the current directory)",
@@ -161,7 +168,7 @@ def main():
         random.choice(VOGON_DESCRIPTORS.split()), random.choice(VOGON_NOUNS.split())
     )
 
-    image_name = "vogon"
+    image_name = args.image
 
     run_container_cmd = """
         docker run -it -d --rm \
