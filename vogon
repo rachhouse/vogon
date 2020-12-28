@@ -109,7 +109,7 @@ def get_jupyterlab_url(container_id: str) -> Tuple[str, str]:
 
     tries, notebook_url, notebook_mnt_dir = 0, None, None
 
-    while (notebook_url is None) or (tries > 3):
+    while (notebook_url is None) or (tries < 3):
         running_notebooks = subprocess.check_output(
             f"docker exec {container_id} bash -c 'jupyter notebook list'", shell=True
         ).decode("utf-8")
