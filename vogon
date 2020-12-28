@@ -11,24 +11,17 @@ import random
 from datetime import datetime
 from typing import Tuple
 
-VOGON_DESCRIPTORS = """
-    freddled plurdled lurgid mordious earted grumbling rancid festering confectious
-    jurpling slayjid slurping jowling meated foonting hooptious crinkly ravenous
-"""
+from vogon_cli.output import colorize
+from vogon_cli import VOGON_DESCRIPTORS, VOGON_NOUNS
 
-VOGON_NOUNS = """
-    gobberwart blurglecruncheon bindlewurdle mashurbitrie glupule gruntbuggly
-    micturation gabbleblotchit jurtle organsquealer agrocrustle axlegrurt liverslime
-    turlingdrome dentrassis jeltz jennings bureaucrat prostetnic bugblatter kwaltz
-"""
-
-subcommands = ["poet", "explorer"]
+subcommands = ["poet", "explorer", "build"]
 
 parser = argparse.ArgumentParser(description="~@ vogon @~")
 subparsers = parser.add_subparsers()
 
 subparser_poet = subparsers.add_parser("poet")
 subparser_explorer = subparsers.add_parser("explorer")
+subparser_build = subparsers.add_parser("build")
 
 for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.items():
 
@@ -70,20 +63,6 @@ def header_art(variant: str) -> str:
     else:
         return None
 
-
-def colorize(color: str, text: str):
-    color_style = {
-        "black": 30,
-        "red": 31,
-        "green": 32,
-        "yellow": 33,
-        "blue": 34,
-        "magenta": 35,
-        "cyan": 36,
-        "white": 37,
-    }
-
-    return f"\033[{color_style[color]}m{text}\033[0m"
 
 
 def get_jupyterlab_url(container_id: str) -> Tuple[str, str]:
@@ -127,7 +106,7 @@ def main():
     repo_dir, mnt_dir, mnt_volume = None, None, None
 
     if args.variant == "poet":
-        print(colorize("green", header_art("poet")))
+        print(colorize("info", header_art("poet")))
 
     elif args.variant == "explorer":
         print(header_art("explorer"))
@@ -203,11 +182,11 @@ def main():
         notebook_url, notebook_mnt_dir = get_jupyterlab_url(container_id)
         print(f"JupyterLab launched from {notebook_mnt_dir}:\n{notebook_url}")
 
-    print("\n", colorize("green", ".~@ | @~" * 5), "\n")
+    print("\n", colorize("info", ".~@ | @~" * 5), "\n")
 
     subprocess.call([f"docker container attach {container_id}"], shell=True)
 
-    print(colorize("yellow", "\n** vogon destruct **"))
+    print(colorize("comment", "\n** vogon destruct **"))
 
 
 if __name__ == "__main__":
