@@ -11,8 +11,9 @@ import random
 from datetime import datetime
 from typing import Tuple
 
-from vogon_cli.output import colorize
-from vogon_cli import VOGON_DESCRIPTORS, VOGON_NOUNS
+# from vogon_guts.output import colorize
+# from vogon_guts import VOGON_DESCRIPTORS, VOGON_NOUNS
+from vogon_guts import VogonPoet, VogonExplorer
 
 subcommands = ["poet", "explorer", "build"]
 
@@ -113,87 +114,100 @@ def main():
     repo_dir, mnt_dir, mnt_volume = None, None, None
 
     if args.variant == "poet":
-        print(colorize("info", header_art("poet")))
+        vogon = VogonPoet(
+            docker_image_name=args.image,
+            repo_dir=args.repo,
+            mnt_dir=args.mnt_dir,
+            start_jupyter_lab=args.jupyterlab,
+            python_version=args.python_version,            
+        )
+        vogon.run()
 
     elif args.variant == "explorer":
-        print(header_art("explorer"))
+        vogon = VogonExplorer(
+            docker_image_name=args.image,
+            mnt_dir=args.mnt_dir,
+            start_jupyter_lab=args.jupyterlab,
+            python_version=args.python_version,
+        )
+        vogon.run()
 
     else:
         raise Exception("whaaaa")
 
-    repo_dir = pathlib.Path(args.repo).absolute()
+    # repo_dir = pathlib.Path(args.repo).absolute()
 
-    print(f"Repo directory:\t{repo_dir}")
+    # print(f"Repo directory:\t{repo_dir}")
 
-    repo_name = repo_dir.parts[-1]
-    print(f"Repo name is: {repo_name}")
+    # repo_name = repo_dir.parts[-1]
+    # print(f"Repo name is: {repo_name}")
 
-    # check for a pyproject.toml
+    # # check for a pyproject.toml
 
-    if args.mnt_dir:
-        mnt_dir = pathlib.Path(args.mnt_dir).absolute()
-        print(f"Mnt directory:\t{mnt_dir}")
+    # if args.mnt_dir:
+    #     mnt_dir = pathlib.Path(args.mnt_dir).absolute()
+    #     print(f"Mnt directory:\t{mnt_dir}")
 
-    repo_volume = f"-v {repo_dir}:/repos/{repo_name} \\" if repo_dir else "\\"
-    mnt_volume = f"-v {mnt_dir}:/mnt \\" if mnt_dir else "\\"
+    # repo_volume = f"-v {repo_dir}:/repos/{repo_name} \\" if repo_dir else "\\"
+    # mnt_volume = f"-v {mnt_dir}:/mnt \\" if mnt_dir else "\\"
 
-    print(f"Python version:\t{args.python_version}")
-    print(f"Jupyterlab:\t{'yes' if args.jupyterlab else 'no'}")
+    # print(f"Python version:\t{args.python_version}")
+    # print(f"Jupyterlab:\t{'yes' if args.jupyterlab else 'no'}")
 
-    print()
-    print("Starting docker container.")
+    # print()
+    # print("Starting docker container.")
 
-    container_name = "{}_{}".format(
-        random.choice(VOGON_DESCRIPTORS.split()), random.choice(VOGON_NOUNS.split())
-    )
+    # container_name = "{}_{}".format(
+    #     random.choice(VOGON_DESCRIPTORS.split()), random.choice(VOGON_NOUNS.split())
+    # )
 
-    image_name = args.image
+    # image_name = args.image
 
-    run_container_cmd = """
-        docker run -it -d --rm \
-            --name {container_name} \
-            --env CONTAINER_NAME={container_name} \
-            -p 8888:8888 \
-            {add_repo_volume}
-            {add_mnt_volume}
-            {image_name} \
-            bash
-    """.format(
-        container_name=container_name,
-        add_repo_volume=repo_volume,
-        add_mnt_volume=mnt_volume,
-        image_name=image_name
-    )
+    # run_container_cmd = """
+    #     docker run -it -d --rm \
+    #         --name {container_name} \
+    #         --env CONTAINER_NAME={container_name} \
+    #         -p 8888:8888 \
+    #         {add_repo_volume}
+    #         {add_mnt_volume}
+    #         {image_name} \
+    #         bash
+    # """.format(
+    #     container_name=container_name,
+    #     add_repo_volume=repo_volume,
+    #     add_mnt_volume=mnt_volume,
+    #     image_name=image_name
+    # )
 
-    container_id = subprocess.getoutput(run_container_cmd)
+    # container_id = subprocess.getoutput(run_container_cmd)
 
-    print(f"Container id: {container_id}")
+    # print(f"Container id: {container_id}")
 
-    # try to poetry update the repo
-    # poetry install will complain if lock is out of date
-    print(f"Calling poetry install for {repo_name}")
-    subprocess.call(
-        [f"docker exec {container_id} bash -c 'cd /repos/{repo_name}; poetry install'"],
-        shell=True,
-    )
+    # # try to poetry update the repo
+    # # poetry install will complain if lock is out of date
+    # print(f"Calling poetry install for {repo_name}")
+    # subprocess.call(
+    #     [f"docker exec {container_id} bash -c 'cd /repos/{repo_name}; poetry install'"],
+    #     shell=True,
+    # )
 
-    print("Creating a kernel for the poetry virtualenv")
-    subprocess.call(
-        [
-            f"docker exec {container_id} bash -c 'cd /repos/{repo_name}; poetry run python -m ipykernel install --user --name={repo_name}'"
-        ],
-        shell=True,
-    )
+    # print("Creating a kernel for the poetry virtualenv")
+    # subprocess.call(
+    #     [
+    #         f"docker exec {container_id} bash -c 'cd /repos/{repo_name}; poetry run python -m ipykernel install --user --name={repo_name}'"
+    #     ],
+    #     shell=True,
+    # )
 
-    if args.jupyterlab:
-        notebook_url, notebook_mnt_dir = get_jupyterlab_url(container_id)
-        print(f"JupyterLab launched from {notebook_mnt_dir}:\n{notebook_url}")
+    # if args.jupyterlab:
+    #     notebook_url, notebook_mnt_dir = get_jupyterlab_url(container_id)
+    #     print(f"JupyterLab launched from {notebook_mnt_dir}:\n{notebook_url}")
 
-    print("\n", colorize("info", ".~@ | @~" * 5), "\n")
+    # print("\n", colorize("info", ".~@ | @~" * 5), "\n")
 
-    subprocess.call([f"docker container attach {container_id}"], shell=True)
+    # subprocess.call([f"docker container attach {container_id}"], shell=True)
 
-    print(colorize("comment", "\n** vogon destruct **"))
+    # print(colorize("comment", "\n** vogon destruct **"))
 
 
 if __name__ == "__main__":

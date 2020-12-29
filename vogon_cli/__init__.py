@@ -1,1 +1,0 @@
-from .names import VOGON_DESCRIPTORS, VOGON_NOUNS
