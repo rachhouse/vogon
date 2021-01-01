@@ -61,12 +61,15 @@ def main():
         )
 
     elif args.variant == "explorer":
-        raise NotImplementedError("VogonExplorer is currently under intergalactic highway construction.")
+        raise NotImplementedError(
+            "VogonExplorer is currently under intergalactic highway construction."
+        )
 
     elif args.variant == "build":
         vogon = VogonBuilder()
 
     vogon.launch()
+
 
 if __name__ == "__main__":
     sys.exit(main())

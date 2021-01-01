@@ -51,5 +51,6 @@ STYLES = {
     "warning": style("yellow", None, None),
 }
 
+
 def colorize(style: str, text: str) -> str:
     return "{}{}\033[0m".format(STYLES[style], text)
