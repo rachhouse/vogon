@@ -4,8 +4,8 @@ import subprocess
 from datetime import datetime
 from typing import Optional, Tuple
 
-from vogon_guts.names import VOGON_DESCRIPTORS, VOGON_NOUNS
-from vogon_guts.output import colorize
+from bureaucracy.names import VOGON_DESCRIPTORS, VOGON_NOUNS
+from bureaucracy.output import colorize
 
 DEFAULT_PYTHON_VERSION = "3.8"
 

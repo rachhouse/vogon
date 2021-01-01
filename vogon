@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from vogon_guts import VogonExplorer, VogonPoet
+from bureaucracy import VogonExplorer, VogonPoet
 
 subcommands = ["poet", "explorer", "build"]
 
