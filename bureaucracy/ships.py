@@ -131,6 +131,11 @@ class VogonBase:
 
         return notebook_url, notebook_mnt_dir
 
+class VogonBuilder(VogonBase):
+
+    def run(self):
+        # def build_image():
+        "docker build -t vogon -f Mothership ."
 
 class VogonPoet(VogonBase):
     def __init__(
