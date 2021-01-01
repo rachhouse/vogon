@@ -1,1 +1,1 @@
-from .ships import VogonPoet, VogonExplorer
+from .ships import VogonBuilder, VogonPoet, VogonExplorer

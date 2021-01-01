@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from bureaucracy import VogonExplorer, VogonPoet
+from bureaucracy import VogonBuilder, VogonExplorer, VogonPoet
 
 subcommands = ["poet", "explorer", "build"]
 
@@ -12,7 +12,6 @@ subparsers = parser.add_subparsers()
 
 subparser_poet = subparsers.add_parser("poet")
 subparser_explorer = subparsers.add_parser("explorer")
-subparser_build = subparsers.add_parser("build")
 
 for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.items():
 
@@ -45,11 +44,12 @@ for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.
         default="3.8",
     )
 
+subparser_build = subparsers.add_parser("build")
+subparser_build.set_defaults(variant="build")
+
 
 def main():
     args = parser.parse_args()
-
-    repo_dir, mnt_dir, mnt_volume = None, None, None
 
     if args.variant == "poet":
         vogon = VogonPoet(
@@ -59,14 +59,14 @@ def main():
             start_jupyter_lab=args.jupyterlab,
             python_version=args.python_version,
         )
-        vogon.run()
 
     elif args.variant == "explorer":
-        raise NotImplementedError("hold yo' horses")
+        raise NotImplementedError("VogonExplorer is currently under intergalactic highway construction.")
 
-    else:
-        raise Exception("whaaaa")
+    elif args.variant == "build":
+        vogon = VogonBuilder()
 
+    vogon.launch()
 
 if __name__ == "__main__":
     sys.exit(main())

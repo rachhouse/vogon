@@ -133,9 +133,23 @@ class VogonBase:
 
 class VogonBuilder(VogonBase):
 
-    def run(self):
-        # def build_image():
-        "docker build -t vogon -f Mothership ."
+    def launch(self):
+
+        print(colorize("info", self._header_art()))
+
+        construction_dir = pathlib.Path(__file__).parent.parent / "construction"
+
+        build_mothership = f"cd {construction_dir}; docker build -t vogon -f Mothership ."
+        
+        print("Building Mothership docker image.")
+        self._issue_command(build_mothership, wait_for_completion=True)
+
+        print(colorize("info", "\nvogon Mothership build is complete."))
+
+
+    
+    def _header_art(self) -> str:
+        return "\n~@ vogon builder @~\n"
 
 class VogonPoet(VogonBase):
     def __init__(
@@ -157,7 +171,7 @@ class VogonPoet(VogonBase):
 
         self._check_for_pyproject_toml()
 
-    def run(self):
+    def launch(self):
 
         print(colorize("info", self._header_art()))
 

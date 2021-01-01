@@ -1,4 +1,4 @@
 ipykernel
 ipython
 jupyter
-jupyterlab'<3.0'
+jupyterlab==2.2.9
