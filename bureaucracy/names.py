@@ -3,10 +3,12 @@
 VOGON_DESCRIPTORS = """
     freddled plurdled lurgid mordious earted grumbling rancid festering confectious
     jurpling slayjid slurping jowling meated foonting hooptious crinkly ravenous
+    shouting
 """
 
 VOGON_NOUNS = """
     gobberwart blurglecruncheon bindlewurdle mashurbitrie glupule gruntbuggly
     micturation gabbleblotchit jurtle organsquealer agrocrustle axlegrurt liverslime
     turlingdrome dentrassis jeltz jennings bureaucrat prostetnic bugblatter kwaltz
+    megabrantis mown
 """

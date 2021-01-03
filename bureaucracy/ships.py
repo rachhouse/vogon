@@ -1,3 +1,9 @@
+""" Contains classes to run the core vogon functions: VogonBase, VogonBuilder,
+    VogonPoet, and VogonExplorer.
+"""
+
+import abc
+import json
 import pathlib
 import random
 import subprocess
@@ -10,7 +16,11 @@ from bureaucracy.output import colorize
 DEFAULT_PYTHON_VERSION = "3.8"
 
 
-class VogonBase:
+class VogonBase(abc.ABC):
+    """ Base class for other Vogon* classes. Contains common functionality to run
+        bash commands and orchestrate docker containers.
+    """
+
     def _get_absolute_path(self, dir: Optional[str] = None) -> Optional[pathlib.Path]:
         """ If a string dir is passed, returns pathlib.Path object referencing 
             absolute directory path of dir. If None is passed, returns None.
@@ -27,6 +37,16 @@ class VogonBase:
         multiline: bool = False,
         wait_for_completion: bool = False,
     ) -> Optional[str]:
+        """ Run a bash command using subprocess.
+
+            Args:
+                command: string command to execute
+                capture_output: bool to control if command output is returned
+                multiline: bool to indicate if command output is expected to span
+                    multiple lines
+                wait_for_completion: bool to control if program execution should waits
+                    until command completes to continue
+        """
 
         if wait_for_completion:
             subprocess.call([command], shell=True)
@@ -39,7 +59,8 @@ class VogonBase:
                 return output
 
     def _get_container_name(self) -> str:
-        """ Return a randomly generated vogon-flavor docker container name. """
+        """Return a randomly generated vogon-flavor docker container name."""
+
         random.seed(datetime.now())
         return "{}_{}".format(
             random.choice(VOGON_DESCRIPTORS.split()), random.choice(VOGON_NOUNS.split())
@@ -98,6 +119,15 @@ class VogonBase:
         self._issue_command(attach_to_container, wait_for_completion=True)
 
     def _start_jupyterlab(self, container_id: str) -> Tuple[str, str]:
+        """ Start a jupyterlab session in a running docker container.
+
+            Args:
+                container_id: string id of running container to attach to
+
+            Returns:
+                jupyterlab url: url of running (localhost) jupyterlab, with token
+                mnt directory: directory from which jupyterlab was launched
+        """
 
         start_jupyterlab = """
             docker exec -d {} \
@@ -133,9 +163,33 @@ class VogonBase:
 
 
 class VogonBuilder(VogonBase):
+    """Class to manage bulding the vogon Mothership docker image."""
+
     def launch(self):
+        """ Create a ~/.vogonconfig file if it does not already exist, and docker build 
+            the Mothership image.
+        """
 
         print(colorize("info", self._header_art()))
+
+        print("Checking for ~/.vogonconfig file.")
+        self._check_for_config_file()
+
+        print("Building Mothership docker image.\n")
+        self._build_mothership()
+
+        print(colorize("info", "\nvogon Mothership build is complete."))
+
+    def _check_for_config_file(self):
+        """Check for presence of a ~/.vogonconfig file, create if not exists."""
+        vogon_config_file = pathlib.Path.home() / ".vogonconfig"
+
+        if not vogon_config_file.exists():
+            with open(vogon_config_file, "w") as fh:
+                json.dump({"default_image": "vogon"}, fh)
+
+    def _build_mothership(self):
+        """Docker build vogon Mothership image."""
 
         construction_dir = pathlib.Path(__file__).parent.parent / "construction"
 
@@ -143,16 +197,26 @@ class VogonBuilder(VogonBase):
             f"cd {construction_dir}; docker build -t vogon -f Mothership ."
         )
 
-        print("Building Mothership docker image.")
         self._issue_command(build_mothership, wait_for_completion=True)
-
-        print(colorize("info", "\nvogon Mothership build is complete."))
 
     def _header_art(self) -> str:
         return "\n~@ vogon builder @~\n"
 
 
 class VogonPoet(VogonBase):
+    """ Class to manage `vogon poet` operations.
+
+        Example Usage:
+            vogon = VogonPoet(
+                docker_image_name="vogon",
+                repo_dir=path_to_repo_dir,
+                mnt_dir=path_to_mnt_dir,
+                start_jupyter_lab=True,
+                python_version="3.8",
+            )
+            vogon.launch()            
+    """
+
     def __init__(
         self,
         docker_image_name: str,
@@ -161,6 +225,19 @@ class VogonPoet(VogonBase):
         start_jupyter_lab: bool = False,
         python_version: str = DEFAULT_PYTHON_VERSION,
     ):
+        """ Init a VogonPoet object.
+            
+            Args:
+                docker_image_name: string name of docker image to use
+                repo_dir: string path to repository directory
+                    (repo must contain a pyproject.toml file)
+                mnt_dir: Optional string path to a directory that will be mounted 
+                    as a docker volume at /mnt
+                start_jupyter_lab: bool that controls whether a jupyterlab session is
+                    started within the docker container
+                python_version: Optional string specifying python version to use,
+                    e.g. "3.8" or "3.9"
+        """
 
         self._image_name = docker_image_name
         self._mnt_dir = self._get_absolute_path(mnt_dir)
@@ -173,6 +250,14 @@ class VogonPoet(VogonBase):
         self._check_for_pyproject_toml()
 
     def launch(self):
+        """ Entry method for VogonPoet, orchestrates:
+                * Outputs vogon details
+                * Starts the docker container
+                * Installs the repo via poetry
+                * Creates an ipykernel for the poetry environment
+                * Starts a jupyterlab (if requested)
+                * Joins the docker container
+        """
 
         print(colorize("info", self._header_art()))
 
@@ -219,18 +304,27 @@ class VogonPoet(VogonBase):
                   errors, try deleting poetry.lock file before starting vogon.
         """
 
-        poetry_install_repo = f"docker exec {self._container_id} bash -c 'cd /repos/{self._repo_name}; poetry install'"
+        poetry_install_repo = (
+            f"docker exec {self._container_id} "
+            f"bash -c 'cd /repos/{self._repo_name}; poetry install'"
+        )
         self._issue_command(poetry_install_repo, wait_for_completion=True)
 
-        create_ipykernel = f"docker exec {self._container_id} bash -c 'cd /repos/{self._repo_name}; poetry run python -m ipykernel install --user --name={self._repo_name}'"
+        create_ipykernel = (
+            f"docker exec {self._container_id} "
+            f"bash -c 'cd /repos/{self._repo_name}; "
+            f"poetry run python -m ipykernel install --user --name={self._repo_name}'"
+        )
         self._issue_command(create_ipykernel, wait_for_completion=True)
 
     def _check_for_pyproject_toml(self) -> bool:
-        """ Throws an error if self._repo_dir does not contain a pyproject.toml file. """
+        """Throws an error if self._repo_dir does not contain a pyproject.toml file."""
 
         if not (self._repo_dir / "pyproject.toml").exists():
             raise Exception(
-                f"No pyproject.toml file found in repo dir: {self._repo_dir}. `vogon poet` only supports poetry-managed libraries."
+                f"No pyproject.toml file found in repo dir: {self._repo_dir}. "
+                f"`vogon poet` only supports poetry-managed libraries. Don't make me "
+                f"feed you to the ravenous Bugblatter Beast of Traal."
             )
 
     def _header_art(self) -> str:
@@ -245,12 +339,7 @@ class VogonExplorer(VogonBase):
         start_jupyter_lab: bool = False,
         python_version: str = DEFAULT_PYTHON_VERSION,
     ):
-        super().__init__(
-            docker_image_name=docker_image_name,
-            mnt_dir=mnt_dir,
-            start_jupyter_lab=start_jupyter_lab,
-            python_version=python_version,
-        )
+        pass
 
     def _header_art(self) -> str:
         return "\n~@ vogon explorer @~\n"
