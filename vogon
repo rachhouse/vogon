@@ -39,6 +39,10 @@ for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.
     )
 
     subparser.add_argument(
+        "-s", "--ssh", help="mount your ~/.ssh folder", action="store_true",
+    )
+
+    subparser.add_argument(
         "-p",
         "--python-version",
         choices=["3.8", "3.9"],
@@ -78,6 +82,7 @@ def main():
                 repo_dir=args.repo,
                 mnt_dir=args.mnt_dir,
                 start_jupyter_lab=args.jupyterlab,
+                mount_ssh_dir=args.ssh,
                 python_version=args.python_version,
             )
 

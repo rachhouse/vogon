@@ -49,6 +49,7 @@ STYLES = {
     "comment": style("yellow", None, None),
     "error": style("red", None, None),
     "warning": style("yellow", None, None),
+    "emphasis": style("magenta", None, "bold"),
 }
 
 
