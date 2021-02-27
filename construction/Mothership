@@ -51,6 +51,7 @@ RUN pip install -r /tmp/environments/base.txt
 # Copy in custom profiles.
 COPY customizer/profile/.vimrc $ROOT_HOME/.vimrc
 COPY customizer/profile/.bashrc $ROOT_HOME/.bashrc
+COPY customizer/profile/.gitconfig $ROOT_HOME/.gitconfig
 COPY customizer/git $ROOT_HOME/config/git
 
 # Start us off in /mnt.
