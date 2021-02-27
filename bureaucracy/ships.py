@@ -73,6 +73,7 @@ class VogonBase(abc.ABC):
         mnt_dir: Optional[pathlib.Path] = None,
         repo_dir: Optional[pathlib.Path] = None,
         repo_name: Optional[str] = None,
+        mount_ssh_folder: Optional[bool] = False,
     ) -> str:
         """ Start a docker container with `docker run` using input args.
 
@@ -82,6 +83,7 @@ class VogonBase(abc.ABC):
                 mnt_dir: path of directory to mount to docker /mnt
                 repo_dir: path of repo to mount to docker /repos/repo_name
                 repo_name: str name of repo (final folder in repo_dir path)
+                mount_ssh_folder: bool to indicate whether ~/.ssh should be mounted
 
             Returns:
                 container_id: str id of started container
@@ -91,6 +93,22 @@ class VogonBase(abc.ABC):
         repo_volume = f"-v {repo_dir}:/repos/{repo_name} \\" if repo_dir else "\\"
         mnt_volume = f"-v {mnt_dir}:/mnt \\" if mnt_dir else "\\"
 
+        mnt_ssh = "\\"
+        if mount_ssh_folder:
+            ssh_dir = pathlib.Path.home() / ".ssh"
+            if ssh_dir.exists():
+                mnt_ssh = f"-v {ssh_dir}:/root/.ssh \\"
+            else:
+                print(
+                    colorize(
+                        "error",
+                        (
+                            f"You selected to mount your ssh directory ({ssh_dir}), "
+                            f"but no such directory exists. Continuing, despite your best efforts."
+                        ),
+                    )
+                )
+
         start_docker_container = """
             docker run -it -d --rm \
                 --name {container_name} \
@@ -98,12 +116,14 @@ class VogonBase(abc.ABC):
                 -p 8888:8888 \
                 {add_repo_volume}
                 {add_mnt_volume}
+                {add_ssh_volume}
                 {image_name} \
                 bash
         """.format(
             container_name=container_name,
             add_repo_volume=repo_volume,
             add_mnt_volume=mnt_volume,
+            add_ssh_volume=mnt_ssh,
             image_name=image_name,
         )
 
@@ -111,7 +131,7 @@ class VogonBase(abc.ABC):
 
     def _attach_to_container(self, container_id: str) -> None:
         """ Attach to a running docker container.
-            
+
             Args:
                 container_id: string id of running container to attach to
         """
@@ -214,7 +234,7 @@ class VogonPoet(VogonBase):
                 start_jupyter_lab=True,
                 python_version="3.8",
             )
-            vogon.launch()            
+            vogon.launch()
     """
 
     def __init__(
@@ -223,18 +243,21 @@ class VogonPoet(VogonBase):
         repo_dir: str,
         mnt_dir: Optional[str] = None,
         start_jupyter_lab: bool = False,
+        mount_ssh_dir: bool = False,
         python_version: str = DEFAULT_PYTHON_VERSION,
     ):
         """ Init a VogonPoet object.
-            
+
             Args:
                 docker_image_name: string name of docker image to use
                 repo_dir: string path to repository directory
                     (repo must contain a pyproject.toml file)
-                mnt_dir: Optional string path to a directory that will be mounted 
+                mnt_dir: Optional string path to a directory that will be mounted
                     as a docker volume at /mnt
                 start_jupyter_lab: bool that controls whether a jupyterlab session is
                     started within the docker container
+                mount_ssh_dir: bool that controls whether ~/.ssh is mounted to the
+                    docker container
                 python_version: Optional string specifying python version to use,
                     e.g. "3.8" or "3.9"
         """
@@ -245,6 +268,7 @@ class VogonPoet(VogonBase):
         self._repo_name = self._repo_dir.parts[-1]
 
         self._jupyter = start_jupyter_lab
+        self._mount_ssh = mount_ssh_dir
         self._python_version = python_version
 
         self._check_for_pyproject_toml()
@@ -259,20 +283,23 @@ class VogonPoet(VogonBase):
                 * Joins the docker container
         """
 
+        self._container_name = self._get_container_name()
+
         print(colorize("info", self._header_art()))
 
+        print(f"Container:\t{colorize('emphasis', self._container_name)}")
         print(f"Repo directory:\t{self._repo_dir}")
-        print(f"Repo name is:\t{self._repo_name}")
+        print(f"Repo name is:\t{colorize('emphasis', self._repo_name)}")
 
         if self._mnt_dir:
             print(f"Mnt directory:\t{self._mnt_dir}")
 
         print(f"Python version:\t{self._python_version}")
         print(f"Jupyterlab:\t{'yes' if self._jupyter else 'no'}")
+        print(f"Mount ~/.ssh:\t{'yes' if self._mount_ssh else 'no'}")
 
         print()
         print("Starting docker container.")
-        self._container_name = self._get_container_name()
 
         self._container_id = self._start_docker_container(
             image_name=self._image_name,
@@ -280,16 +307,25 @@ class VogonPoet(VogonBase):
             mnt_dir=self._mnt_dir,
             repo_dir=self._repo_dir,
             repo_name=self._repo_name,
+            mount_ssh_folder=self._mount_ssh,
         )
 
         print(f"Container id: {self._container_id}")
 
-        print(f"Running poetry install for {self._repo_name} and creating ipykernel.")
+        print(f"Running poetry install for {self._repo_name}.")
         self._install_repo()
 
         if self._jupyter:
-            notebook_url, notebook_mnt_dir = self._start_jupyterlab(self._container_id)
-            print(f"JupyterLab launched from {notebook_mnt_dir}:\n{notebook_url}")
+            print("Creating ipykernel for installed poetry environment.")
+
+            if self._create_ipykernel():
+                notebook_url, notebook_mnt_dir = self._start_jupyterlab(
+                    self._container_id
+                )
+                print(
+                    f"JupyterLab launched from {notebook_mnt_dir}:"
+                    f"\n{colorize('emphasis', notebook_url)}"
+                )
 
         print("\n", colorize("info", ".~@ | @~" * 5), "\n")
         self._attach_to_container(self._container_id)
@@ -298,10 +334,12 @@ class VogonPoet(VogonBase):
 
     def _install_repo(self):
         """ Poetry install the repo in the container and create an ipykernel for it.
-        
-            TODO: Make this function intelligently decide whether to `poetry install` 
+
+            TODO: Make this function intelligently decide whether to `poetry install`
                   or `poetry update`, depending on lock file freshness. For now, if it
                   errors, try deleting poetry.lock file before starting vogon.
+
+                  https://github.com/python-poetry/poetry/pull/1954
         """
 
         poetry_install_repo = (
@@ -310,12 +348,43 @@ class VogonPoet(VogonBase):
         )
         self._issue_command(poetry_install_repo, wait_for_completion=True)
 
-        create_ipykernel = (
+    def _create_ipykernel(self) -> bool:
+        """ Create an ipykernel for the installed poetry environment.
+
+            Returns True if ipykernel exists as a poetry dependency (i.e. is installed)
+            and the ipykernel was created, else returns False.
+        """
+
+        # Check for ipykernel as a poetry dependency, warn if not.
+        poetry_check_for_ipykernel = (
             f"docker exec {self._container_id} "
-            f"bash -c 'cd /repos/{self._repo_name}; "
-            f"poetry run python -m ipykernel install --user --name={self._repo_name}'"
+            f"bash -c 'cd /repos/{self._repo_name}; poetry show | grep ipykernel'"
         )
-        self._issue_command(create_ipykernel, wait_for_completion=True)
+
+        poetry_ipykernel = self._issue_command(
+            poetry_check_for_ipykernel, capture_output=True
+        )
+
+        if not poetry_ipykernel:
+            print(
+                colorize(
+                    "error",
+                    (
+                        "ipykernel is not one of your poetry dependencies. No "
+                        "jupyterlab for you until you add it as a poetry dev dependency."
+                    ),
+                )
+            )
+            return False
+
+        else:
+            create_ipykernel = (
+                f"docker exec {self._container_id} "
+                f"bash -c 'cd /repos/{self._repo_name}; "
+                f"poetry run python -m ipykernel install --user --name={self._repo_name}'"
+            )
+            self._issue_command(create_ipykernel, wait_for_completion=True)
+            return True
 
     def _check_for_pyproject_toml(self) -> bool:
         """Throws an error if self._repo_dir does not contain a pyproject.toml file."""
@@ -337,6 +406,7 @@ class VogonExplorer(VogonBase):
         docker_image_name: str,
         mnt_dir: Optional[str] = None,
         start_jupyter_lab: bool = False,
+        mount_ssh_dir: bool = False,
         python_version: str = DEFAULT_PYTHON_VERSION,
     ):
         pass
