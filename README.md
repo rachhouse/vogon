@@ -12,7 +12,7 @@ The **TL;DR** of `vogon` is that it is a Python script, masquerading as a comman
 ### The cool stuff.
 `vogon` enables you to code locally (i.e. using your IDE/editor of choice) but execute your code within an isolated, reproducible, one-stop-shop development container. It uses Docker to isolate the install of poetry and your library dependencies from your local machine environment.
 
-[system diagram]()
+![vogon system diagram](https://raw.githubusercontent.com/rachhouse/vogon/improve-README/docs/_static/vogon_system.svg)
 
 `vogon` sets you up with a container that you can connect to via a terminal. Within the container, you can execute your code, run your tests, and play with your code in JupyterLab.
 
