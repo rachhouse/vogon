@@ -45,21 +45,31 @@ To get up and running:
 1. Run `vogon poet` from whichever repo directory you want to use. Note that any repo/library you want to develop with `vogon` must be a Poetry-managed library with a `pyproject.toml` file present.
 
 ### `vogon` arguments
-`-m`/`--mnt-dir`
-`-j`/`--mnt-dir`
-`i`
+Check out `vogon poet --help` to get the full list of args, however, here are the most commonly used and helpful:
+```
+  -i IMAGE, --image IMAGE
+                        Name of Docker image to start the vogon container, if
+                        not using the vogon default.
+  -r REPO, --repo REPO  Mount a local host directory to /repos within the
+                        container. Defaults to the current directory.
+  -m MNT_DIR, --mnt-dir MNT_DIR
+                        Mount a local host directory to /mnt within the
+                        container.
+  -j, --jupyterlab      Run a JupyterLab session out of the container, using
+                        /mnt.
+```
 
 ## FAQ
-I don't want to use the default vogon Docker image, but I do want to use the vogon workflow. What should I do?
-Good news! You can use vogon with your Docker image of choice. Simply use the `-i` argument and supply the name of the container that you'd like to use.
+*I don't want to use the default `vogon` Docker image, but I do want to use the `vogon` workflow. What should I do?*
+
+Good news! You can use `vogon` with your Docker image of choice. Simply use the `-i` argument and supply the name of the container that you'd like to use.
 
 If you want to use a different image for vogon by default, edit your `~/.vogonconfig` file and change the `default_image` to the image name of your preferred Docker image.
 
-Note that any Docker image you use with vogon needs to have the following installed:
+Note that any Docker image you use with `vogon` needs to have the following installed:
 * Python
 * Poetry
+* JupyterLab < `3.0.0` (3.0 introduced a change in behavior that was incompatible with `vogon`'s use of `jupyter lab` and `jupyter notebook` listings, and I haven't had time to check in if it's been fixed.)
 
 ## Miscellaneous
 The git prompt and completion goodies that `vogon` uses are compliments of the [official git git repo](https://github.com/git/git/tree/master/contrib/completion).
-
-## Planned, but currently unscheduled, improvements
