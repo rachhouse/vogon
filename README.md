@@ -1,6 +1,6 @@
 # vogon
 
-`vogon` is a Python library development tool that I created for my own personal use and convenience. However, if, like me, you dig containerization and think **Poetry**(https://python-poetry.org) is a pretty awesome tool for building & packaging Python libraries, you may also find `vogon` useful.
+`vogon` is a Python library development tool that I created for my own personal use and convenience. However, if, like me, you dig containerization and think [**Poetry**](https://python-poetry.org) is a pretty awesome tool for building & packaging Python libraries, you may also find `vogon` useful.
 
 The **TL;DR** of `vogon` is that it is a Python script, masquerading as a command line utility, which automates:
 1. Starting a Docker container,
@@ -15,7 +15,7 @@ The **TL;DR** of `vogon` is that it is a Python script, masquerading as a comman
 
 ![vogon system diagram](https://raw.githubusercontent.com/rachhouse/vogon/improve-README/docs/_static/vogon_system.svg)
 
-`vogon` sets you up with a container that you can connect to via a terminal. Within the container, you can execute your code, run your tests, and play with your code in [JupyterLab](http://jupyterlab.io).
+`vogon` sets you up with a container that you can connect to via a terminal. Within the container, you can execute your library code, run your tests, and play with your library code in [JupyterLab](http://jupyterlab.io).
 
 And, bonus, if you are using [VS Code](https://code.visualstudio.com), you can just connect to the Docker container directly via the [**Remote - Containers** plugin](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers), and use the installed Poetry virtualenv as your Python interpreter. This is totally rad.
 
@@ -26,7 +26,7 @@ Plus, like any good developer, I have some opinionated opinions:tm: on local dev
 
 * Your local environment generally has a lot more going on than a simple ubuntu Docker container. If you're working on MacOS with `pyenv`/`poetry`/`virtualenv`/`conda`/`homebrew`/etc., or any combination of those tools, often there are unanticipated environmental variables (literal and metaphorical) that can hinder development in unanticipated ways. I think the simplicity and - perhaps more importantly - control & reproducibility of a Docker container makes local development cleaner and ultimately more successful.
 
-* I'm a big fan of disaster preparedness when it comes to development. You don't want to have your productivity sidelined for days because of an inopportune `pip install` command which forces you to rebuild your entire local Python setup. When your development environment can be both source controlled, isolated, *and* reproducibly instantiated, your worst case scenario is generally just restarting a container.
+* I'm a big fan of disaster preparedness when it comes to development. You don't want to have your productivity sidelined for days because of an inopportune `pip install` command which ends up with you rebuilding your entire local Python setup. When your development environment can be both source controlled, isolated, *and* reproducibly instantiated, your worst case scenario is generally just restarting a container.
 
 ### The caveats of using `vogon`
 1. It helps to be relatively familiar with Docker if you need to diagnose any unexpected behavior.
@@ -42,7 +42,7 @@ To get up and running:
 1. `git clone` this repo to your local machine.
 1. Add the cloned `vogon` directory path to the beginning of your `PATH` variable, e.g. `export PATH="/Users/you/pathto/vogon:$PATH"` in your `~/.bashrc` (or other appropriate profile file). Source your profile file and/or start a new terminal.
 1. Run **`vogon build`** to build the default `vogon` Mothership image and create your `~/.vogonconfig` file.
-1. Run **`vogon poet`** from whichever repo directory you want to use. Note that any repo/library you want to develop with `vogon` must be a Poetry-managed library with a `pyproject.toml` file present.
+1. Run **`vogon poet`** from whichever repo directory you want to use. Note that any repo/library you want to develop with `vogon` must be a Poetry-managed library *with a `pyproject.toml` file present*.
 
 ### `vogon` arguments
 Check out `vogon poet --help` to get the full list of args, however, here are the most commonly used and helpful:
