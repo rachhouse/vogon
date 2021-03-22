@@ -20,33 +20,43 @@ for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.
     subparser.set_defaults(variant=name)
 
     subparser.add_argument(
-        "-i", "--image", help="Use a different docker image",
+        "-i",
+        "--image",
+        help="Name of Docker image to start the vogon container, if not using the vogon default.",
     )
 
     subparser.add_argument(
         "-r",
         "--repo",
-        help="Mount a local directory as a repo (defaults to the current directory)",
+        help="Mount a local host directory to /repos within the container. Defaults to the current directory.",
         default=".",
     )
 
     subparser.add_argument(
-        "-m", "--mnt-dir", help="Mount a local directory as a docker volume"
+        "-m",
+        "--mnt-dir",
+        help="Mount a local host directory to /mnt within the container.",
     )
 
     subparser.add_argument(
-        "-j", "--jupyterlab", help="start a jupyterlab session", action="store_true",
+        "-j",
+        "--jupyterlab",
+        help="Run a JupyterLab session out of the container, using /mnt.",
+        action="store_true",
     )
 
     subparser.add_argument(
-        "-s", "--ssh", help="mount your ~/.ssh folder", action="store_true",
+        "-s",
+        "--ssh",
+        help="Mount local host ~/.ssh folder within the container.",
+        action="store_true",
     )
 
     subparser.add_argument(
         "-p",
         "--python-version",
-        choices=["3.8", "3.9"],
-        help="Python version to use",
+        choices=["3.8"],
+        help="Python version to use.",
         default="3.8",
     )
 
