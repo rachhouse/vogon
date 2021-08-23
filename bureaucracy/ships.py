@@ -114,6 +114,7 @@ class VogonBase(abc.ABC):
                 --name {container_name} \
                 --env CONTAINER_NAME={container_name} \
                 -p 8888:8888 \
+                -p 8501:8501 \
                 {add_repo_volume}
                 {add_mnt_volume}
                 {add_ssh_volume}
