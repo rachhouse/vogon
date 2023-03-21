@@ -52,14 +52,6 @@ for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.
         action="store_true",
     )
 
-    subparser.add_argument(
-        "-p",
-        "--python-version",
-        choices=["3.8"],
-        help="Python version to use.",
-        default="3.8",
-    )
-
 subparser_build = subparsers.add_parser("build")
 subparser_build.set_defaults(variant="build")
 
@@ -92,8 +84,7 @@ def main():
                 repo_dir=args.repo,
                 mnt_dir=args.mnt_dir,
                 start_jupyter_lab=args.jupyterlab,
-                mount_ssh_dir=args.ssh,
-                python_version=args.python_version,
+                mount_ssh_dir=args.ssh
             )
 
         elif args.variant == "explorer":

@@ -6,15 +6,14 @@ import abc
 import json
 import pathlib
 import random
+import re
 import subprocess
+
 from datetime import datetime
 from typing import Optional, Tuple
 
 from bureaucracy.names import VOGON_DESCRIPTORS, VOGON_NOUNS
 from bureaucracy.output import colorize
-
-DEFAULT_PYTHON_VERSION = "3.8"
-
 
 class VogonBase(abc.ABC):
     """ Base class for other Vogon* classes. Contains common functionality to run
@@ -54,7 +53,6 @@ class VogonBase(abc.ABC):
             return subprocess.check_output(command, shell=True).decode("utf-8")
         else:
             output = subprocess.getoutput(command)
-
             if capture_output:
                 return output
 
@@ -159,28 +157,45 @@ class VogonBase(abc.ABC):
 
         self._issue_command(start_jupyterlab)
 
-        tries, notebook_url, notebook_mnt_dir = 0, None, None
+        tries, jupyter_server_url, jupyter_server_mount_dir = 0, None, None
 
-        while (notebook_url is None) and (tries < 3):
-            get_jupyterlab_url = (
-                f"docker exec {container_id} bash -c 'jupyter notebook list'"
-            )
+        while (jupyter_server_url is None) and (tries < 3):
 
-            running_notebooks = self._issue_command(
-                get_jupyterlab_url, capture_output=True, multiline=True
-            )
+            try:
+                get_jupyterlab_server_url = (
+                    f"docker exec {container_id} bash -c 'jupyter server list'"
+                )
 
-            running_notebooks = running_notebooks.split("\n")
-            if running_notebooks[1]:
-                # also check if url matches expected pattern
-                notebook_url, notebook_mnt_dir = running_notebooks[1].split(" :: ")
+                # I don't know why, but for some reason this command needs to be run twice
+                # for subprocess to capture the output.
+                self._issue_command(get_jupyterlab_server_url, capture_output=True)
+                running_servers = self._issue_command(
+                    get_jupyterlab_server_url, capture_output=True
+                )
+
+                # Expected output pattern:
+                # [JupyterServerListApp] Currently running servers:
+                # [JupyterServerListApp] http://827c20250b6c:8888/?token=efd4e8853cbe26f40225d82fa18f15b9ea3d7b7f15a34868 :: /mnt
+
+                running_servers = running_servers.split("\n")
+
+                if running_servers[1]:
+                    jupyter_server_url, jupyter_server_mount_dir = running_servers[1].split(" :: ")
+
+                    # Pull out jupyterlab token and assemble URL.
+                    token = re.search(r"^.*token=(.*)$", jupyter_server_url).group(1)
+                    jupyter_server_url = f"http://127.0.0.1:8888/lab?token={token}"
+
+            except Exception as err:
+                print(colorize("error", f"Problem launching jupyterlab: {err}"))
+                pass
 
             tries += 1
 
-        if notebook_url is None:
-            raise Exception("Unable to launch jupyterlab.")
+        if jupyter_server_url is None:
+            raise Exception(f"Unable to launch jupyterlab after {tries} tries.")
 
-        return notebook_url, notebook_mnt_dir
+        return jupyter_server_url, jupyter_server_mount_dir
 
 
 class VogonBuilder(VogonBase):
@@ -233,7 +248,6 @@ class VogonPoet(VogonBase):
                 repo_dir=path_to_repo_dir,
                 mnt_dir=path_to_mnt_dir,
                 start_jupyter_lab=True,
-                python_version="3.8",
             )
             vogon.launch()
     """
@@ -244,8 +258,7 @@ class VogonPoet(VogonBase):
         repo_dir: str,
         mnt_dir: Optional[str] = None,
         start_jupyter_lab: bool = False,
-        mount_ssh_dir: bool = False,
-        python_version: str = DEFAULT_PYTHON_VERSION,
+        mount_ssh_dir: bool = False
     ):
         """ Init a VogonPoet object.
 
@@ -259,8 +272,6 @@ class VogonPoet(VogonBase):
                     started within the docker container
                 mount_ssh_dir: bool that controls whether ~/.ssh is mounted to the
                     docker container
-                python_version: Optional string specifying python version to use,
-                    e.g. "3.8" or "3.9"
         """
 
         self._image_name = docker_image_name
@@ -270,7 +281,6 @@ class VogonPoet(VogonBase):
 
         self._jupyter = start_jupyter_lab
         self._mount_ssh = mount_ssh_dir
-        self._python_version = python_version
 
         self._check_for_pyproject_toml()
 
@@ -295,7 +305,6 @@ class VogonPoet(VogonBase):
         if self._mnt_dir:
             print(f"Mnt directory:\t{self._mnt_dir}")
 
-        print(f"Python version:\t{self._python_version}")
         print(f"Jupyterlab:\t{'yes' if self._jupyter else 'no'}")
         print(f"Mount ~/.ssh:\t{'yes' if self._mount_ssh else 'no'}")
 
@@ -407,8 +416,7 @@ class VogonExplorer(VogonBase):
         docker_image_name: str,
         mnt_dir: Optional[str] = None,
         start_jupyter_lab: bool = False,
-        mount_ssh_dir: bool = False,
-        python_version: str = DEFAULT_PYTHON_VERSION,
+        mount_ssh_dir: bool = False
     ):
         pass
 
