@@ -67,9 +67,12 @@ Good news! You can use `vogon` with your Docker image of choice. Simply use the 
 If you want to use a different image for vogon by default, edit your `~/.vogonconfig` file and change the `default_image` to the image name of your preferred Docker image.
 
 Note that any Docker image you use with `vogon` needs to have the following installed:
-* Python
+* Python, including:
+  * `ipykernel`
+  * `ipython`
+  * `jupyter`
+  * `jupyterlab`
 * Poetry
-* JupyterLab < `3.0.0` (3.0 introduced a change in behavior that was incompatible with `vogon`'s use of `jupyter lab` and `jupyter notebook` listings, and I haven't had time to check in and see if it's been fixed.)
 
 ## Miscellaneous
 The git prompt and completion goodies that `vogon` uses are compliments of the [official git git repo](https://github.com/git/git/tree/master/contrib/completion).
