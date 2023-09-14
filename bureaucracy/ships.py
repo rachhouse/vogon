@@ -110,8 +110,10 @@ class VogonBase(abc.ABC):
         if config.get("envs", None) is not None:
             for env_name, env_value in config["envs"].items():
                 if os.getenv(env_value, None) is not None:
-                    env_value = os.getenv(env_value)
-                config_envs.append(f"--env {env_name}={env_value}")
+                    environ_value = os.getenv(env_value).strip()
+                    config_envs.append(f"--env {env_name}='{environ_value}'")
+                else:
+                    config_envs.append(f"--env {env_name}={env_value}")
 
         config_envs_str = " ".join(config_envs)
 
