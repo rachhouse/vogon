@@ -5,94 +5,65 @@ import json
 import pathlib
 import sys
 
-from bureaucracy import VogonBuilder, VogonExplorer, VogonPoet
-
-subcommands = ["poet", "explorer", "build"]
+from bureaucracy import VogonPoet
 
 parser = argparse.ArgumentParser(description="~@ vogon @~")
-subparsers = parser.add_subparsers()
 
-subparser_poet = subparsers.add_parser("poet")
-subparser_explorer = subparsers.add_parser("explorer")
+parser.add_argument(
+    "-i",
+    "--image",
+    help="Name of Docker image to start the vogon container, if not using the vogon default.",
+)
 
-for name, subparser in {"poet": subparser_poet, "explorer": subparser_explorer}.items():
+parser.add_argument(
+    "-m",
+    "--mnt-dir",
+    help="Mount a local host directory to /mnt within the container.",
+)
 
-    subparser.set_defaults(variant=name)
-
-    subparser.add_argument(
-        "-i",
-        "--image",
-        help="Name of Docker image to start the vogon container, if not using the vogon default.",
-    )
-
-    subparser.add_argument(
-        "-r",
-        "--repo",
-        help="Mount a local host directory to /repos within the container. Defaults to the current directory.",
-        default=".",
-    )
-
-    subparser.add_argument(
-        "-m",
-        "--mnt-dir",
-        help="Mount a local host directory to /mnt within the container.",
-    )
-
-    subparser.add_argument(
-        "-j",
-        "--jupyterlab",
-        help="Run a JupyterLab session out of the container, using /mnt.",
-        action="store_true",
-    )
-
-    subparser.add_argument(
-        "-s",
-        "--ssh",
-        help="Mount local host ~/.ssh folder within the container.",
-        action="store_true",
-    )
-
-subparser_build = subparsers.add_parser("build")
-subparser_build.set_defaults(variant="build")
-
+parser.add_argument(
+    "-j",
+    "--jupyterlab",
+    help="Run a JupyterLab session out of the container, using /mnt.",
+    action="store_true",
+)
 
 def main():
     args = parser.parse_args()
 
-    vogon_config_file = pathlib.Path.home() / ".vogonconfig"
-    if vogon_config_file.exists():
-        with open(vogon_config_file, "r") as fh:
+    vogon_homedir_config_file = pathlib.Path.home() / ".vogonconfig"
+
+    if vogon_homedir_config_file.exists():
+        with open(vogon_homedir_config_file, "r") as fh:
             vogon_config = json.load(fh)
     else:
         vogon_config = {}
 
-    if args.variant == "build":
-        vogon = VogonBuilder()
+    vogon_pwd_config_file = pathlib.Path(".") / ".vogonconfig"
+    if vogon_pwd_config_file.exists():
+        with open(vogon_pwd_config_file, "r") as fh:
+            vogon_pwd_config = json.load(fh)
+
+        vogon_config = {**vogon_config, **vogon_pwd_config}
+
+    if args.image:
+        image = args.image
+    elif vogon_config.get("image", None):
+        image = vogon_config["image"]
     else:
-        if args.image:
-            image = args.image
-        elif vogon_config.get("default_image", None):
-            image = vogon_config["default_image"]
-        else:
-            raise Exception(
-                "No image name specified. Either use the -i flag or define a default_image in your ~/.vogonconfig file."
-            )
+        raise Exception(
+            "No image name specified. Either use the -i flag or define an image key in your ~/.vogonconfig file."
+        )
 
-        if args.variant == "poet":
-            vogon = VogonPoet(
-                docker_image_name=image,
-                repo_dir=args.repo,
-                mnt_dir=args.mnt_dir,
-                start_jupyter_lab=args.jupyterlab,
-                mount_ssh_dir=args.ssh
-            )
+    poet = VogonPoet(
+        docker_image_name=image,
+        repo_dir=".",
+        mnt_dir=args.mnt_dir,
+        start_jupyter_lab=args.jupyterlab,
+        config=vogon_config
+    )
 
-        elif args.variant == "explorer":
-            raise NotImplementedError(
-                "VogonExplorer is currently under intergalactic highway construction."
-            )
-
-    vogon.launch()
+    poet.launch()
 
 
 if __name__ == "__main__":

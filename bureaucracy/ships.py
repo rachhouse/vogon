@@ -1,16 +1,15 @@
-""" Contains classes to run the core vogon functions: VogonBase, VogonBuilder,
-    VogonPoet, and VogonExplorer.
-"""
+""" Contains classes to run the core vogon functions: VogonBase and VogonPoet."""
 
 import abc
 import json
+import os
 import pathlib
 import random
 import re
 import subprocess
 
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from bureaucracy.names import VOGON_DESCRIPTORS, VOGON_NOUNS
 from bureaucracy.output import colorize
@@ -71,7 +70,7 @@ class VogonBase(abc.ABC):
         mnt_dir: Optional[pathlib.Path] = None,
         repo_dir: Optional[pathlib.Path] = None,
         repo_name: Optional[str] = None,
-        mount_ssh_folder: Optional[bool] = False,
+        config: Optional[Dict] = {}
     ) -> str:
         """ Start a docker container with `docker run` using input args.
 
@@ -81,7 +80,7 @@ class VogonBase(abc.ABC):
                 mnt_dir: path of directory to mount to docker /mnt
                 repo_dir: path of repo to mount to docker /repos/repo_name
                 repo_name: str name of repo (final folder in repo_dir path)
-                mount_ssh_folder: bool to indicate whether ~/.ssh should be mounted
+                config: Dict containing vogon config details specifying run parameters
 
             Returns:
                 container_id: str id of started container
@@ -91,39 +90,53 @@ class VogonBase(abc.ABC):
         repo_volume = f"-v {repo_dir}:/repos/{repo_name} \\" if repo_dir else "\\"
         mnt_volume = f"-v {mnt_dir}:/mnt \\" if mnt_dir else "\\"
 
-        mnt_ssh = "\\"
-        if mount_ssh_folder:
-            ssh_dir = pathlib.Path.home() / ".ssh"
-            if ssh_dir.exists():
-                mnt_ssh = f"-v {ssh_dir}:/root/.ssh \\"
-            else:
-                print(
-                    colorize(
-                        "error",
-                        (
-                            f"You selected to mount your ssh directory ({ssh_dir}), "
-                            f"but no such directory exists. Continuing, despite your best efforts."
-                        ),
-                    )
-                )
+        config_ports, config_volumes, config_envs = [], [], []
+
+        # Config-specified ports.
+        if config.get("ports", None) is not None:
+            for host_port, container_port in config["ports"].items():
+                config_ports.append(f"-p {host_port}:{container_port}")
+
+        config_ports_str = " ".join(config_ports)
+
+        # Config-specified mounted volumes.
+        if config.get("volumes", None) is not None:
+            for host_path, container_path in config["volumes"].items():
+                config_volumes.append(f"-v {host_path}:{container_path}")
+
+        config_volumes_str = " ".join(config_volumes)
+
+        # Config-specified environment variables.
+        if config.get("envs", None) is not None:
+            for env_name, env_value in config["envs"].items():
+                if os.getenv(env_value, None) is not None:
+                    environ_value = os.getenv(env_value).strip()
+                    config_envs.append(f"--env {env_name}='{environ_value}'")
+                else:
+                    config_envs.append(f"--env {env_name}={env_value}")
+
+        config_envs_str = " ".join(config_envs)
 
         start_docker_container = """
             docker run -it -d --rm \
                 --name {container_name} \
                 --env CONTAINER_NAME={container_name} \
+                {config_envs} \
                 -p 8888:8888 \
-                -p 8501:8501 \
+                {config_ports} \
                 {add_repo_volume}
                 {add_mnt_volume}
-                {add_ssh_volume}
+                {config_volumes} \
                 {image_name} \
                 bash
         """.format(
             container_name=container_name,
             add_repo_volume=repo_volume,
             add_mnt_volume=mnt_volume,
-            add_ssh_volume=mnt_ssh,
             image_name=image_name,
+            config_ports=config_ports_str,
+            config_volumes=config_volumes_str,
+            config_envs=config_envs_str
         )
 
         return self._issue_command(start_docker_container, capture_output=True)
@@ -198,47 +211,6 @@ class VogonBase(abc.ABC):
         return jupyter_server_url, jupyter_server_mount_dir
 
 
-class VogonBuilder(VogonBase):
-    """Class to manage bulding the vogon Mothership docker image."""
-
-    def launch(self):
-        """ Create a ~/.vogonconfig file if it does not already exist, and docker build 
-            the Mothership image.
-        """
-
-        print(colorize("info", self._header_art()))
-
-        print("Checking for ~/.vogonconfig file.")
-        self._check_for_config_file()
-
-        print("Building Mothership docker image.\n")
-        self._build_mothership()
-
-        print(colorize("info", "\nvogon Mothership build is complete."))
-
-    def _check_for_config_file(self):
-        """Check for presence of a ~/.vogonconfig file, create if not exists."""
-        vogon_config_file = pathlib.Path.home() / ".vogonconfig"
-
-        if not vogon_config_file.exists():
-            with open(vogon_config_file, "w") as fh:
-                json.dump({"default_image": "vogon"}, fh)
-
-    def _build_mothership(self):
-        """Docker build vogon Mothership image."""
-
-        construction_dir = pathlib.Path(__file__).parent.parent / "construction"
-
-        build_mothership = (
-            f"cd {construction_dir}; docker build -t vogon -f Mothership ."
-        )
-
-        self._issue_command(build_mothership, wait_for_completion=True)
-
-    def _header_art(self) -> str:
-        return "\n~@ vogon builder @~\n"
-
-
 class VogonPoet(VogonBase):
     """ Class to manage `vogon poet` operations.
 
@@ -258,7 +230,7 @@ class VogonPoet(VogonBase):
         repo_dir: str,
         mnt_dir: Optional[str] = None,
         start_jupyter_lab: bool = False,
-        mount_ssh_dir: bool = False
+        config: Optional[Dict] = {}
     ):
         """ Init a VogonPoet object.
 
@@ -270,8 +242,7 @@ class VogonPoet(VogonBase):
                     as a docker volume at /mnt
                 start_jupyter_lab: bool that controls whether a jupyterlab session is
                     started within the docker container
-                mount_ssh_dir: bool that controls whether ~/.ssh is mounted to the
-                    docker container
+                config: Dict containing vogon config details specifying run parameters
         """
 
         self._image_name = docker_image_name
@@ -280,7 +251,7 @@ class VogonPoet(VogonBase):
         self._repo_name = self._repo_dir.parts[-1]
 
         self._jupyter = start_jupyter_lab
-        self._mount_ssh = mount_ssh_dir
+        self._config = config
 
         self._check_for_pyproject_toml()
 
@@ -306,7 +277,6 @@ class VogonPoet(VogonBase):
             print(f"Mnt directory:\t{self._mnt_dir}")
 
         print(f"Jupyterlab:\t{'yes' if self._jupyter else 'no'}")
-        print(f"Mount ~/.ssh:\t{'yes' if self._mount_ssh else 'no'}")
 
         print()
         print("Starting docker container.")
@@ -317,7 +287,7 @@ class VogonPoet(VogonBase):
             mnt_dir=self._mnt_dir,
             repo_dir=self._repo_dir,
             repo_name=self._repo_name,
-            mount_ssh_folder=self._mount_ssh,
+            config=self._config
         )
 
         print(f"Container id: {self._container_id}")
@@ -408,17 +378,3 @@ class VogonPoet(VogonBase):
 
     def _header_art(self) -> str:
         return "\n~@ vogon poet @~\n"
-
-
-class VogonExplorer(VogonBase):
-    def __init__(
-        self,
-        docker_image_name: str,
-        mnt_dir: Optional[str] = None,
-        start_jupyter_lab: bool = False,
-        mount_ssh_dir: bool = False
-    ):
-        pass
-
-    def _header_art(self) -> str:
-        return "\n~@ vogon explorer @~\n"
